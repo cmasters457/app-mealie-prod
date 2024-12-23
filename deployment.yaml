@@ -1,0 +1,77 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: mealie
+  namespace: apps
+  labels:
+    app: mealie
+spec:
+  replicas: 1
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mealie
+  template:
+    metadata:
+      labels:
+        app: mealie
+    spec:
+      containers:
+      - name: mealie
+        image: hkotel/mealie:v2.3.0
+        resources:
+          #requests:
+          #  cpu: 500m
+          #  memory: 768Mi
+          limits:
+            cpu: 700m
+            memory: 1.5Gi
+        env:
+          - name: ALLOW_SIGNUP
+            value: "true"
+          - name: PUID
+            value: "1000"
+          - name: PGID
+            value: "1000"
+          - name: TZ
+            value: "Australia/Melbourne"
+          - name: MAX_WORKERS
+            value: "1"
+          - name: WEB_CONCURRENCY
+            value: "1"
+          - name: BASE_URL
+            value: "https://mealie.mastersdomain.net"
+          - name: TOKEN_TIME
+            value: "48"
+          # - name: DISABLE_AUTH
+          #   value: "True"
+          - name: DB_ENGINE
+            value: "postgres"
+          - name: POSTGRES_USER
+            value: "mealie"
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mealie-postgres-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_SERVER
+            value: "cluster01-rw.postgres.svc.cluster.local"
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_DB
+            value: "mealie"
+        volumeMounts:
+          - name: mealie-data
+            mountPath: /app/data
+        ports:
+        - containerPort: 9000
+          name: http
+          protocol: TCP
+      volumes:
+        - name: mealie-data
+          persistentVolumeClaim:
+            claimName: mealie-pvc
